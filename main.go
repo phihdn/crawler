@@ -6,32 +6,30 @@ import (
 )
 
 func main() {
-	args := os.Args[1:] // Skip the program name (os.Args[0])
-
-	if len(args) < 1 {
+	if len(os.Args) < 2 {
 		fmt.Println("no website provided")
-		os.Exit(1)
+		return
 	}
-
-	if len(args) > 1 {
+	if len(os.Args) > 2 {
 		fmt.Println("too many arguments provided")
-		os.Exit(1)
+		return
+	}
+	rawBaseURL := os.Args[1]
+
+	const maxConcurrency = 3
+	cfg, err := configure(rawBaseURL, maxConcurrency)
+	if err != nil {
+		fmt.Printf("Error - configure: %v", err)
+		return
 	}
 
-	// At this point, we have exactly one argument
-	baseURL := args[0]
-	fmt.Printf("starting crawl of: %s\n", baseURL)
+	fmt.Printf("starting crawl of: %s...\n", rawBaseURL)
 
-	// Initialize the pages map to track the count of each URL
-	pages := make(map[string]int)
+	cfg.wg.Add(1)
+	go cfg.crawlPage(rawBaseURL)
+	cfg.wg.Wait()
 
-	// Start crawling from the base URL
-	crawlPage(baseURL, baseURL, pages)
-
-	// Print the results
-	fmt.Println("\nCrawl results:")
-	fmt.Println("==============")
-	for url, count := range pages {
-		fmt.Printf("%s: %d\n", url, count)
+	for normalizedURL, count := range cfg.pages {
+		fmt.Printf("%d - %s\n", count, normalizedURL)
 	}
 }

@@ -12,13 +12,13 @@ import (
 func getURLsFromHTML(htmlBody, rawBaseURL string) ([]string, error) {
 	parsedBaseURL, err := url.Parse(rawBaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing base URL: %w", err)
+		return nil, fmt.Errorf("couldn't parse base URL: %v", err)
 	}
 
 	reader := strings.NewReader(htmlBody)
 	doc, err := html.Parse(reader)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing HTML: %w", err)
+		return nil, fmt.Errorf("couldn't parse HTML: %v", err)
 	}
 
 	var urls []string

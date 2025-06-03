@@ -6,61 +6,51 @@ import (
 )
 
 // crawlPage recursively crawls a website starting from the current URL
-func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
-	// Make sure the raw current URL is on the same domain as the raw base URL
-	baseURL, err := url.Parse(rawBaseURL)
-	if err != nil {
-		fmt.Printf("failed to parse base URL: %v\n", err)
-		return
-	}
+func (cfg *config) crawlPage(rawCurrentURL string) {
+	cfg.concurrencyControl <- struct{}{}
+	defer func() {
+		<-cfg.concurrencyControl
+		cfg.wg.Done()
+	}()
 
 	currentURL, err := url.Parse(rawCurrentURL)
 	if err != nil {
-		fmt.Printf("failed to parse current URL: %v\n", err)
+		fmt.Printf("Error - crawlPage: couldn't parse URL '%s': %v\n", rawCurrentURL, err)
 		return
 	}
 
-	// Check if the current URL is on the same domain as the base URL
-	if baseURL.Host != currentURL.Host {
-		fmt.Printf("skipping %s: not on same domain as %s\n", rawCurrentURL, rawBaseURL)
+	// skip other websites
+	if currentURL.Hostname() != cfg.baseURL.Hostname() {
 		return
 	}
 
-	// Normalize the current URL
 	normalizedURL, err := normalizeURL(rawCurrentURL)
 	if err != nil {
-		fmt.Printf("failed to normalize URL %s: %v\n", rawCurrentURL, err)
+		fmt.Printf("Error - normalizedURL: %v\n", err)
 		return
 	}
 
-	// If we've already crawled this page, just increment the count and return
-	if count, ok := pages[normalizedURL]; ok {
-		pages[normalizedURL] = count + 1
+	isFirst := cfg.addPageVisit(normalizedURL)
+	if !isFirst {
 		return
 	}
 
-	// Otherwise, add an entry to the pages map for the normalized URL with count 1
-	pages[normalizedURL] = 1
+	fmt.Printf("crawling %s\n", rawCurrentURL)
 
-	// Print a message to show progress
-	fmt.Printf("crawling: %s\n", rawCurrentURL)
-
-	// Get the HTML from the current URL
-	html, err := getHTML(rawCurrentURL)
+	htmlBody, err := getHTML(rawCurrentURL)
 	if err != nil {
-		fmt.Printf("failed to get HTML from %s: %v\n", rawCurrentURL, err)
+		fmt.Printf("Error - getHTML: %v\n", err)
 		return
 	}
 
-	// Extract all URLs from the HTML
-	urls, err := getURLsFromHTML(html, rawCurrentURL)
+	nextURLs, err := getURLsFromHTML(htmlBody, cfg.baseURL.String())
 	if err != nil {
-		fmt.Printf("failed to get URLs from %s: %v\n", rawCurrentURL, err)
+		fmt.Printf("Error - getURLsFromHTML: %v\n", err)
 		return
 	}
 
-	// Recursively crawl each URL found on the page
-	for _, url := range urls {
-		crawlPage(rawBaseURL, url, pages)
+	for _, nextURL := range nextURLs {
+		cfg.wg.Add(1)
+		go cfg.crawlPage(nextURL)
 	}
 }

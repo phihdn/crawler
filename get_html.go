@@ -13,7 +13,7 @@ func getHTML(rawURL string) (string, error) {
 	// Make the HTTP GET request
 	resp, err := http.Get(rawURL)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to make HTTP request: %v", err)
 	}
 	defer resp.Body.Close()
 
