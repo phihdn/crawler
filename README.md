@@ -54,7 +54,7 @@ This will crawl example.com with up to 10 concurrent requests and a maximum of 1
 
 When the crawler completes its task, it will generate a report like this:
 
-```bash
+```text
 =============================
   REPORT for https://example.com
 =============================
@@ -88,10 +88,6 @@ The report shows each page sorted by the number of internal links pointing to it
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is open source and available under the [MIT License](LICENSE).
 
 ## Acknowledgments
 
