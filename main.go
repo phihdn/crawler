@@ -3,8 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 )
+
+type pageCount struct {
+	url   string
+	count int
+}
 
 func main() {
 	if len(os.Args) < 4 {
@@ -42,7 +48,37 @@ func main() {
 	go cfg.crawlPage(rawBaseURL)
 	cfg.wg.Wait()
 
-	for normalizedURL, count := range cfg.pages {
-		fmt.Printf("%d - %s\n", count, normalizedURL)
+	printReport(cfg.pages, rawBaseURL)
+}
+
+func printReport(pages map[string]int, baseURL string) {
+	fmt.Printf("=============================\n")
+	fmt.Printf("  REPORT for %s\n", baseURL)
+	fmt.Printf("=============================\n")
+
+	// Sort the pages by count (desc) and URL (asc)
+	sortedPages := sortPages(pages)
+
+	// Print the report
+	for _, page := range sortedPages {
+		fmt.Printf("Found %d internal links to %s\n", page.count, page.url)
 	}
+}
+
+func sortPages(pages map[string]int) []pageCount {
+	// Convert the map to a slice of structs
+	var pageSlice []pageCount
+	for url, count := range pages {
+		pageSlice = append(pageSlice, pageCount{url: url, count: count})
+	}
+
+	// Sort by count (desc) and URL (asc)
+	sort.Slice(pageSlice, func(i, j int) bool {
+		if pageSlice[i].count == pageSlice[j].count {
+			return pageSlice[i].url < pageSlice[j].url // Alphabetical when counts are equal
+		}
+		return pageSlice[i].count > pageSlice[j].count // Descending order by count
+	})
+
+	return pageSlice
 }
